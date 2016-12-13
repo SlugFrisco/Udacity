@@ -16,6 +16,8 @@ from keras.layers.pooling import MaxPooling2D
 from keras.models import Model, Sequential
 from keras.optimizers import SGD, RMSprop, Adam
 import json
+import sys
+import time
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -25,26 +27,26 @@ FLAGS = flags.FLAGS
 # export CUDA_HOME=/usr/local/cuda
 
 # some other useful flags
-flags.DEFINE_integer('epochs', 20, "The number of epochs.")
+flags.DEFINE_integer('epochs', 10, "The number of epochs.")
 flags.DEFINE_integer('batch_size', 128, "The batch size.")
-flags.DEFINE_integer('lr', 0.1, "The learning rate.")
+flags.DEFINE_integer('lr', 0.01, "The learning rate.")
 
-DATA_FOLDER = 'driving_data/2/'
+DATA_FOLDER = 'driving_data/3/'
 CSV_NAME = 'driving_log.csv'
 # For folder 1
 # PATH_TO_FIX = '/home/casey/Desktop/Udacity-sandbox/SDC/9-simulation/50hz_simulator/Default Linux desktop Universal_Data/'
 
 # For folder 2
-PATH_TO_FIX = '/home/casey/Desktop/Udacity-sandbox/'
+# PATH_TO_FIX = '/home/casey/Desktop/Udacity-sandbox/'
 
 # For folder 3
-# PATH_TO_FIX =''
+PATH_TO_FIX ='/home/casey/Desktop/'
 
 with open(DATA_FOLDER + CSV_NAME, 'r') as f:
   reader = csv.reader(f)
   your_list = list(reader)
   # Limit for memory purposes
-  your_list = your_list[:8000]
+  # your_list = your_list[:8000]
 
 # Get columns of .csv
 center_imgs = [item[0] for item in your_list]
@@ -134,11 +136,14 @@ def main(_):
     model.add(Dense(neurons4, activation='tanh'))
     model.add(Dense(neurons5))
 
+    adam = Adam(lr=FLAGS.lr)
     rmsprop = RMSprop(lr=FLAGS.lr)
-    model.compile(loss='mse', optimizer=rmsprop) # adam or rmsprop
+    model.compile(loss='mse', optimizer=adam) # adam or rmsprop
 
+    start_time = time.time()
     model.fit(X_train, y_train, verbose=1, nb_epoch=FLAGS.epochs, batch_size=FLAGS.batch_size,
               validation_data=(X_val, y_val), shuffle=True)
+    print("Total training time on {} images: {} sec".format(len(X_train), time.time() - start_time))
     # Uncomment at end to get test scores
     #score = model.evaluate(X_test, y_test, batch_size=16, verbose=1)
     #print("\nTest score: {}".format(score))
@@ -184,9 +189,12 @@ def make_sets(X, y):
 
 # Fixes image paths after moving folders, resizes image to 32 x 16
 def imglist_to_np(img_list):
-    print('Loading images...')
     features = []
+    count = 0
     for imgpath in img_list:
+        count += 1
+        sys.stdout.write("\rLoading image {} of {}".format(count, len(img_list)))
+        sys.stdout.flush()
         newpath = imgpath.replace(PATH_TO_FIX,
                                   DATA_FOLDER)
         im = cv2.imread(newpath)
